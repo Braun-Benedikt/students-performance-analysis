@@ -12,6 +12,6 @@ sns.stripplot(x='Additional amount of studying (in hrs) per week', y='Your 2023 
 for i, row in avg_per_category.iterrows():
     plt.scatter(row['Additional amount of studying (in hrs) per week'], row['Your 2023 academic year average/GPA in % (Ignore if you are 2024 1st year student)'], color='red', label='Average' if i == 0 else None)
 plt.title('Impact of additional studying on GPA ')
-plt.xlabel('Additional studying (in hrs)')
-plt.ylabel('2023 GPA in %')
+plt.xlabel('Additional studying (hrs)')
+plt.ylabel('2023 GPA (%)')
 plt.show()
