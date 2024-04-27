@@ -1,17 +1,80 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.stats import chi2_contingency
+from itertools import combinations
 
 survey_df = pd.read_csv('./data/stats_survey.csv')
-avg_per_category = survey_df.groupby('Additional amount of studying (in hrs) per week')['Your 2023 academic year average/GPA in % (Ignore if you are 2024 1st year student)'].mean().reset_index()
+survey_columns = ['time', 'sex', 'matric_avg', 'study_year', 'faculty',
+                  'study_year_avg', 'accom_status', 'monthly_allowance', 'scholarship',
+                  'wkly_stdy_hrs', 'socializing_freq', 'drinks_per_night', 'missed_classes',
+                  'failed_modules', 'relationship', 'approval', 'parent_strength']
+print(survey_df.columns)
+survey_df.columns = survey_columns
+print(survey_df.columns)
+print(survey_df.corr())
 
-# Create a strip plot
-category_order = ['0', '1-3', '3-5', '5-8', '8+']
-plt.figure(figsize=(8, 6))
-sns.stripplot(x='Additional amount of studying (in hrs) per week', y='Your 2023 academic year average/GPA in % (Ignore if you are 2024 1st year student)', data=survey_df, order=category_order, jitter=True)
-for i, row in avg_per_category.iterrows():
-    plt.scatter(row['Additional amount of studying (in hrs) per week'], row['Your 2023 academic year average/GPA in % (Ignore if you are 2024 1st year student)'], color='red', label='Average' if i == 0 else None)
-plt.title('Impact of additional studying on GPA ')
-plt.xlabel('Additional studying (hrs)')
-plt.ylabel('2023 GPA (%)')
-plt.show()
+# create combinations of column pairs
+categorical_columns = survey_df.select_dtypes(include=['object']).columns
+column_pairs = combinations(categorical_columns, 2)
+
+# chi-squared test for each pair of columns
+for pair in column_pairs:
+    cross_tab = pd.crosstab(survey_df[pair[0]], survey_df[pair[1]])
+    chi2, p, _, _ = chi2_contingency(cross_tab)
+    if p < 0.05:
+        print(f"Chi-Quadrat-Wert für {pair[0]} und {pair[1]}:", chi2)
+        print(f"p-Wert für {pair[0]} und {pair[1]}:", p)
+        print("------")
+
+for column in survey_df.select_dtypes(include=['object']).columns:
+    if column != 'time':
+        unique_values = survey_df[column].unique()
+        print(f"Mögliche Ausprägungen der Spalte '{column}': {unique_values}")
+
+# the selected columns are expected to have the strongest correlation with study_year_avg
+selected_columns = ['study_year', 'monthly_allowance', 'scholarship', 'wkly_stdy_hrs', 'socializing_freq',
+                    'drinks_per_night', 'missed_classes', 'parent_strength', 'relationship']
+
+# mapping the ordinal categories to numeric values
+ordinal_categories_map = {
+    '1st Year': 1,
+    '2nd Year': 2,
+    '3rd Year': 3,
+    '4th Year': 4,
+    'Postgraduate': 5,
+    'R 4001- R 5000': 1,
+    'R 5001 - R 6000': 2,
+    'R 6001 - R 7000': 3,
+    'R 7001 - R 8000': 4,
+    'R 8000+': 5,
+    'No': 0,
+    'Yes (NSFAS, etc...)': 1,
+    'Yes': 1,
+    '0': 0,
+    '1-3': 1,
+    '3-5': 2,
+    '5-8': 3,
+    '8+': 4,
+    '1': 1,
+    'Only weekends': 1.5,
+    '2': 2,
+    '3': 3,
+    '4+': 4,
+    'Distant': 0,
+    'Fair': 1,
+    'Close': 2,
+    'Very close': 3
+}
+
+for column in selected_columns:
+    survey_df[column] = survey_df[column].map(ordinal_categories_map).fillna(survey_df[column])
+print(survey_df.corrwith(survey_df['study_year_avg']))
+
+# scatterplots of 2023 GPA and the selected columns
+for column in selected_columns:
+    plt.scatter(survey_df[column], survey_df['study_year_avg'])
+    plt.title(f'Impact of {column} on GPA')
+    plt.xlabel(column)
+    plt.ylabel('2023 GPA (%)')
+    plt.show()
