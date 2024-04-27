@@ -27,14 +27,54 @@ for pair in column_pairs:
         print(f"p-Wert für {pair[0]} und {pair[1]}:", p)
         print("------")
 
-# create a strip plot
-category_order = ['0', '1-3', '3-5', '5-8', '8+']
-plt.figure(figsize=(8, 6))
-sns.stripplot(x='wkly_stdy_hrs', y='study_year_avg', data=survey_df, order=category_order, jitter=True)
-avg_per_category = survey_df.groupby('wkly_stdy_hrs')['study_year_avg'].mean().reset_index()
-for i, row in avg_per_category.iterrows():
-    plt.scatter(row['wkly_stdy_hrs'], row['study_year_avg'], color='red', label='Average' if i == 0 else None)
-plt.title('Impact of additional studying on GPA ')
-plt.xlabel('Additional studying (hrs)')
-plt.ylabel('2023 GPA (%)')
-plt.show()
+for column in survey_df.select_dtypes(include=['object']).columns:
+    if column != 'time':
+        unique_values = survey_df[column].unique()
+        print(f"Mögliche Ausprägungen der Spalte '{column}': {unique_values}")
+
+# the selected columns are expected to have the strongest correlation with study_year_avg
+selected_columns = ['study_year', 'monthly_allowance', 'scholarship', 'wkly_stdy_hrs', 'socializing_freq',
+                    'drinks_per_night', 'missed_classes', 'parent_strength', 'relationship']
+
+# mapping the ordinal categories to numeric values
+ordinal_categories_map = {
+    '1st Year': 1,
+    '2nd Year': 2,
+    '3rd Year': 3,
+    '4th Year': 4,
+    'Postgraduate': 5,
+    'R 4001- R 5000': 1,
+    'R 5001 - R 6000': 2,
+    'R 6001 - R 7000': 3,
+    'R 7001 - R 8000': 4,
+    'R 8000+': 5,
+    'No': 0,
+    'Yes (NSFAS, etc...)': 1,
+    'Yes': 1,
+    '0': 0,
+    '1-3': 1,
+    '3-5': 2,
+    '5-8': 3,
+    '8+': 4,
+    '1': 1,
+    'Only weekends': 1.5,
+    '2': 2,
+    '3': 3,
+    '4+': 4,
+    'Distant': 0,
+    'Fair': 1,
+    'Close': 2,
+    'Very close': 3
+}
+
+for column in selected_columns:
+    survey_df[column] = survey_df[column].map(ordinal_categories_map).fillna(survey_df[column])
+print(survey_df.corrwith(survey_df['study_year_avg']))
+
+# scatterplots of 2023 GPA and the selected columns
+for column in selected_columns:
+    plt.scatter(survey_df[column], survey_df['study_year_avg'])
+    plt.title(f'Impact of {column} on GPA')
+    plt.xlabel(column)
+    plt.ylabel('2023 GPA (%)')
+    plt.show()
